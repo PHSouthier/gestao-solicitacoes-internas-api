@@ -1,6 +1,9 @@
 # Dependências
 /node_modules
 
+# Prisma Client gerado (o npm install recria)
+/src/generated
+
 # Build
 /dist
 /build

@@ -2,15 +2,17 @@
 
 FROM node:24-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json prisma.config.ts ./
+COPY prisma ./prisma
 RUN npm ci
 
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build \
- && npm prune --omit=dev
+RUN npx prisma generate \
+ && npm run build \
+ && npm prune --omit=dev --ignore-scripts
 
 FROM node:24-alpine AS runtime
 WORKDIR /app

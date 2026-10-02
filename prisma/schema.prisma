@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Area {
+  id               Int           @id(map: "pk_areas") @default(autoincrement())
+  nome             String        @unique(map: "uk_areas_nome") @db.VarChar(100)
+  exigeComplemento Boolean       @default(false) @map("exige_complemento")
+  ativo            Boolean       @default(true)
+  criadoEm         DateTime      @default(now()) @map("criado_em") @db.Timestamptz(6)
+  atualizadoEm     DateTime      @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+  solicitacoes     Solicitacao[]
+
+  @@map("areas")
+}
+
+model flyway_schema_history {
+  installed_rank Int      @id(map: "flyway_schema_history_pk")
+  version        String?  @db.VarChar(50)
+  description    String   @db.VarChar(200)
+  type           String   @db.VarChar(20)
+  script         String   @db.VarChar(1000)
+  checksum       Int?
+  installed_by   String   @db.VarChar(100)
+  installed_on   DateTime @default(now()) @db.Timestamp(6)
+  execution_time Int
+  success        Boolean
+
+  @@index([success], map: "flyway_schema_history_s_idx")
+}
+
+model HistoricoStatusSolicitacao {
+  id             String             @id(map: "pk_historico_status_solicitacao") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitacaoId  String             @map("solicitacao_id") @db.Uuid
+  statusAnterior StatusSolicitacao? @map("status_anterior")
+  statusNovo     StatusSolicitacao  @map("status_novo")
+  comentario     String?
+  alteradoPorId  String?            @map("alterado_por_id") @db.Uuid
+  alteradoEm     DateTime           @default(now()) @map("alterado_em") @db.Timestamptz(6)
+  alteradoPor    Usuario?           @relation(fields: [alteradoPorId], references: [id], onUpdate: NoAction, map: "fk_historico_alterado_por")
+  solicitacao    Solicitacao        @relation(fields: [solicitacaoId], references: [id], onUpdate: NoAction, map: "fk_historico_solicitacao")
+
+  @@map("historico_status_solicitacao")
+}
+
+model Solicitacao {
+  id              String                       @id(map: "pk_solicitacoes") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo          BigInt                       @unique(map: "uk_solicitacoes_codigo") @default(autoincrement())
+  titulo          String                       @db.VarChar(150)
+  descricao       String
+  nomeSolicitante String                       @map("nome_solicitante") @db.VarChar(120)
+  areaId          Int                          @map("area_id")
+  areaComplemento String?                      @map("area_complemento") @db.VarChar(100)
+  prioridade      PrioridadeSolicitacao
+  status          StatusSolicitacao            @default(ABERTA)
+  dataSolicitacao DateTime                     @default(dbgenerated("CURRENT_DATE")) @map("data_solicitacao") @db.Date
+  criadoPorId     String?                      @map("criado_por_id") @db.Uuid
+  criadoEm        DateTime                     @default(now()) @map("criado_em") @db.Timestamptz(6)
+  atualizadoEm    DateTime                     @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+  excluidoEm      DateTime?                    @map("excluido_em") @db.Timestamptz(6)
+  historico       HistoricoStatusSolicitacao[]
+  area            Area                         @relation(fields: [areaId], references: [id], onUpdate: NoAction, map: "fk_solicitacoes_area")
+  criadoPor       Usuario?                     @relation(fields: [criadoPorId], references: [id], onUpdate: NoAction, map: "fk_solicitacoes_criado_por")
+
+  @@map("solicitacoes")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Usuario {
+  id                  String                       @id(map: "pk_usuarios") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome                String                       @db.VarChar(120)
+  email               String                       @unique(map: "uk_usuarios_email") @db.VarChar(254)
+  senhaHash           String                       @map("senha_hash") @db.VarChar(255)
+  perfil              PerfilUsuario                @default(SOLICITANTE)
+  ativo               Boolean                      @default(true)
+  criadoEm            DateTime                     @default(now()) @map("criado_em") @db.Timestamptz(6)
+  atualizadoEm        DateTime                     @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+  historicosAlterados HistoricoStatusSolicitacao[]
+  solicitacoesCriadas Solicitacao[]
+
+  @@map("usuarios")
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum PerfilUsuario {
+  SOLICITANTE
+  ANALISTA
+  ADMINISTRADOR
+
+  @@map("perfil_usuario")
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum PrioridadeSolicitacao {
+  BAIXA
+  MEDIA
+  ALTA
+
+  @@map("prioridade_solicitacao")
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum StatusSolicitacao {
+  ABERTA
+  EM_ANALISE
+  APROVADA
+  REJEITADA
+
+  @@map("status_solicitacao")
+}
