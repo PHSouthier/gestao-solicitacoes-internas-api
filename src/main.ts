@@ -1,12 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
+import { configurarApp } from './app.setup.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.use(cookieParser());
+  configurarApp(app);
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Gestão de Solicitações Internas — API')
