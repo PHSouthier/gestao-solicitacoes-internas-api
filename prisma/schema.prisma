@@ -76,11 +76,12 @@ model Usuario {
   id                  String                       @id(map: "pk_usuarios") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nome                String                       @db.VarChar(120)
   email               String                       @unique(map: "uk_usuarios_email") @db.VarChar(254)
-  senhaHash           String                       @map("senha_hash") @db.VarChar(255)
+  senhaHash           String?                      @map("senha_hash") @db.VarChar(255)
   perfil              PerfilUsuario                @default(SOLICITANTE)
   ativo               Boolean                      @default(true)
   criadoEm            DateTime                     @default(now()) @map("criado_em") @db.Timestamptz(6)
   atualizadoEm        DateTime                     @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+  googleId            String?                      @unique(map: "uk_usuarios_google_id") @map("google_id") @db.VarChar(255)
   historicosAlterados HistoricoStatusSolicitacao[]
   solicitacoesCriadas Solicitacao[]
 
