@@ -9,6 +9,7 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
     super({
       adapter: new PrismaPg({
         connectionString: config.getOrThrow<string>('DATABASE_URL'),
+        connectionTimeoutMillis: 5_000,
       }),
     });
   }
