@@ -1,18 +1,12 @@
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // descarta campos que não estão no DTO
-      forbidNonWhitelisted: true, // e responde 400 se vierem campos extras
-      transform: true, // aplica os @Transform e converte para a classe do DTO
-    }),
-  );
+  app.use(cookieParser());
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Gestão de Solicitações Internas — API')
@@ -20,6 +14,7 @@ async function bootstrap() {
       'API REST para cadastro, consulta, análise e decisão de solicitações internas.',
     )
     .setVersion('1.0')
+    .addCookieAuth('access_token')
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
