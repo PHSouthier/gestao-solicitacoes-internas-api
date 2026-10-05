@@ -1,7 +1,13 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { hash } from 'bcryptjs';
 import { CodigoErro } from '../../common/errors/codigos-erro.js';
+import { DomainError } from '../../common/errors/domain-error.js';
 import { Prisma } from '../../generated/prisma/client.js';
+import type { PerfilUsuario } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { CriarUsuarioDto } from './dto/criar-usuario.dto.js';
 import { UsuarioResponseDto } from './dto/usuario-response.dto.js';
@@ -77,6 +83,44 @@ export class UsuariosService {
     googleId: string;
   }): Promise<ContaUsuario> {
     return this.prisma.usuario.create({ data: dados, select: CAMPOS_CONTA });
+  }
+
+  listar(): Promise<UsuarioResponseDto[]> {
+    return this.prisma.usuario.findMany({
+      where: { ativo: true },
+      orderBy: { nome: 'asc' },
+      select: CAMPOS_PUBLICOS,
+    });
+  }
+
+  async alterarPerfil(
+    id: string,
+    perfil: PerfilUsuario,
+    idQuemAltera: string,
+  ): Promise<UsuarioResponseDto> {
+    if (id === idQuemAltera) {
+      throw new DomainError({
+        code: CodigoErro.ALTERACAO_DO_PROPRIO_PERFIL,
+        message: 'Você não pode alterar o seu próprio perfil.',
+      });
+    }
+
+    const existente = await this.prisma.usuario.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existente) {
+      throw new NotFoundException({
+        code: CodigoErro.USUARIO_NAO_ENCONTRADO,
+        message: 'Usuário não encontrado.',
+      });
+    }
+
+    return this.prisma.usuario.update({
+      where: { id },
+      data: { perfil },
+      select: CAMPOS_PUBLICOS,
+    });
   }
 
   async criar(dto: CriarUsuarioDto): Promise<UsuarioResponseDto> {

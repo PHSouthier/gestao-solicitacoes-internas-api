@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { GoogleOAuthService } from './google/google-oauth.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { PerfisGuard } from './perfis.guard.js';
 
 @Module({
   imports: [
