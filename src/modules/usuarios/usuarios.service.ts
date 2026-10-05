@@ -22,6 +22,20 @@ const MENSAGEM_EMAIL_EM_USO =
 export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
+  buscarParaLogin(email: string) {
+    return this.prisma.usuario.findUnique({
+      where: { email },
+      select: { ...CAMPOS_PUBLICOS, senhaHash: true, ativo: true },
+    });
+  }
+
+  buscarAtivoPorId(id: string): Promise<UsuarioResponseDto | null> {
+    return this.prisma.usuario.findFirst({
+      where: { id, ativo: true },
+      select: CAMPOS_PUBLICOS,
+    });
+  }
+
   async criar(dto: CriarUsuarioDto): Promise<UsuarioResponseDto> {
     const existente = await this.prisma.usuario.findUnique({
       where: { email: dto.email },
