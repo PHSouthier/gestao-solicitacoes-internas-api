@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { DadosInvalidosException } from './common/errors/dados-invalidos.exception.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
+import { AreasModule } from './modules/areas/areas.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { UsuariosModule } from './modules/usuarios/usuarios.module.js';
@@ -15,6 +16,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     HealthModule,
     UsuariosModule,
     AuthModule,
+    AreasModule,
   ],
   providers: [
     {
