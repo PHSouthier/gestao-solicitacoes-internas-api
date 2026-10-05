@@ -5,6 +5,7 @@ import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { UsuariosModule } from '../usuarios/usuarios.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
+import { GoogleOAuthService } from './google/google-oauth.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 
 @Module({
@@ -26,6 +27,7 @@ import { JwtAuthGuard } from './jwt-auth.guard.js';
   controllers: [AuthController],
   providers: [
     AuthService,
+    GoogleOAuthService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
