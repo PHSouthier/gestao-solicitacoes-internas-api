@@ -1,0 +1,44 @@
+import { formatarData } from '../../common/validators/data.js';
+import type {
+  HistoricoStatusDto,
+  SolicitacaoDetalheDto,
+  SolicitacaoResumoDto,
+} from './dto/solicitacao-response.dto.js';
+import type {
+  LinhaDetalhe,
+  LinhaHistorico,
+  LinhaResumo,
+} from './solicitacoes.repository.js';
+
+export function formatarCodigo(codigo: bigint): string {
+  return `SOL-${codigo.toString().padStart(6, '0')}`;
+}
+
+export function paraResumo(linha: LinhaResumo): SolicitacaoResumoDto {
+  return {
+    id: linha.id,
+    codigo: formatarCodigo(linha.codigo),
+    titulo: linha.titulo,
+    nomeSolicitante: linha.nomeSolicitante,
+    area: linha.area,
+    areaComplemento: linha.areaComplemento,
+    prioridade: linha.prioridade,
+    status: linha.status,
+    dataSolicitacao: formatarData(linha.dataSolicitacao),
+    criadoEm: linha.criadoEm,
+    atualizadoEm: linha.atualizadoEm,
+  };
+}
+
+export function paraHistorico(linha: LinhaHistorico): HistoricoStatusDto {
+  return { ...linha };
+}
+
+export function paraDetalhe(linha: LinhaDetalhe): SolicitacaoDetalheDto {
+  return {
+    ...paraResumo(linha),
+    descricao: linha.descricao,
+    criadoPor: linha.criadoPor,
+    historico: linha.historico.map(paraHistorico),
+  };
+}
