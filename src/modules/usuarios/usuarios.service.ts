@@ -15,6 +15,16 @@ const CAMPOS_PUBLICOS = {
   criadoEm: true,
 } satisfies Prisma.UsuarioSelect;
 
+const CAMPOS_CONTA = {
+  ...CAMPOS_PUBLICOS,
+  ativo: true,
+  googleId: true,
+} satisfies Prisma.UsuarioSelect;
+
+export type ContaUsuario = Prisma.UsuarioGetPayload<{
+  select: typeof CAMPOS_CONTA;
+}>;
+
 const MENSAGEM_EMAIL_EM_USO =
   'Já existe um usuário cadastrado com este e-mail.';
 
@@ -34,6 +44,36 @@ export class UsuariosService {
       where: { id, ativo: true },
       select: CAMPOS_PUBLICOS,
     });
+  }
+
+  buscarContaPorGoogleId(googleId: string): Promise<ContaUsuario | null> {
+    return this.prisma.usuario.findUnique({
+      where: { googleId },
+      select: CAMPOS_CONTA,
+    });
+  }
+
+  buscarContaPorEmail(email: string): Promise<ContaUsuario | null> {
+    return this.prisma.usuario.findUnique({
+      where: { email },
+      select: CAMPOS_CONTA,
+    });
+  }
+
+  vincularGoogle(id: string, googleId: string): Promise<ContaUsuario> {
+    return this.prisma.usuario.update({
+      where: { id },
+      data: { googleId },
+      select: CAMPOS_CONTA,
+    });
+  }
+
+  criarComGoogle(dados: {
+    nome: string;
+    email: string;
+    googleId: string;
+  }): Promise<ContaUsuario> {
+    return this.prisma.usuario.create({ data: dados, select: CAMPOS_CONTA });
   }
 
   async criar(dto: CriarUsuarioDto): Promise<UsuarioResponseDto> {
