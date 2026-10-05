@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcryptjs';
+import { CodigoErro } from '../../common/errors/codigos-erro.js';
 import { UsuarioResponseDto } from '../usuarios/dto/usuario-response.dto.js';
 import {
   type ContaUsuario,
@@ -37,7 +38,10 @@ export class AuthService {
     );
 
     if (!encontrado || !senhaConfere || !encontrado.ativo) {
-      throw new UnauthorizedException(CREDENCIAIS_INVALIDAS);
+      throw new UnauthorizedException({
+        code: CodigoErro.CREDENCIAIS_INVALIDAS,
+        message: CREDENCIAIS_INVALIDAS,
+      });
     }
 
     const { senhaHash: _senhaHash, ativo: _ativo, ...usuario } = encontrado;
@@ -60,7 +64,10 @@ export class AuthService {
   async usuarioLogado(id: string): Promise<UsuarioResponseDto> {
     const usuario = await this.usuarios.buscarAtivoPorId(id);
     if (!usuario) {
-      throw new UnauthorizedException('Sessão inválida. Faça login novamente.');
+      throw new UnauthorizedException({
+        code: CodigoErro.SESSAO_INVALIDA,
+        message: 'Sessão inválida. Faça login novamente.',
+      });
     }
     return usuario;
   }

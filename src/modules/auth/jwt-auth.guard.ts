@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { CodigoErro } from '../../common/errors/codigos-erro.js';
 import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator.js';
 import { COOKIE_SESSAO } from './auth-cookie.js';
 import type { JwtPayload, RequestAutenticada } from './auth.types.js';
@@ -36,9 +37,10 @@ export class JwtAuthGuard implements CanActivate {
       const payload = await this.jwt.verifyAsync<JwtPayload>(token);
       request.usuario = { id: payload.sub, perfil: payload.perfil };
     } catch {
-      throw new UnauthorizedException(
-        'Sessão inválida ou expirada. Faça login novamente.',
-      );
+      throw new UnauthorizedException({
+        code: CodigoErro.SESSAO_INVALIDA,
+        message: 'Sessão inválida ou expirada. Faça login novamente.',
+      });
     }
 
     return true;

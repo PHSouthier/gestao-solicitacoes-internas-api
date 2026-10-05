@@ -2,6 +2,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CodeChallengeMethod, OAuth2Client } from 'google-auth-library';
 import { randomBytes } from 'node:crypto';
+import { CodigoErro } from '../../../common/errors/codigos-erro.js';
 import { ErroLoginGoogle } from './erro-login-google.js';
 
 export interface PerfilGoogle {
@@ -78,9 +79,10 @@ export class GoogleOAuthService {
 
   private exigirCliente(): OAuth2Client {
     if (!this.cliente) {
-      throw new ServiceUnavailableException(
-        'Login com Google não está configurado.',
-      );
+      throw new ServiceUnavailableException({
+        code: CodigoErro.LOGIN_GOOGLE_INDISPONIVEL,
+        message: 'Login com Google não está configurado.',
+      });
     }
     return this.cliente;
   }

@@ -24,6 +24,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { ErrorResponseDto } from '../../common/dto/error-response.dto.js';
 import { Public } from '../../common/decorators/public.decorator.js';
 import { UsuarioResponseDto } from '../usuarios/dto/usuario-response.dto.js';
 import {
@@ -58,8 +59,14 @@ export class AuthController {
     description: 'Em caso de sucesso, grava o JWT no cookie `access_token`.',
   })
   @ApiOkResponse({ type: UsuarioResponseDto })
-  @ApiBadRequestResponse({ description: 'Dados inválidos' })
-  @ApiUnauthorizedResponse({ description: 'E-mail ou senha inválidos' })
+  @ApiBadRequestResponse({
+    type: ErrorResponseDto,
+    description: 'Dados inválidos',
+  })
+  @ApiUnauthorizedResponse({
+    type: ErrorResponseDto,
+    description: 'E-mail ou senha inválidos',
+  })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -92,6 +99,7 @@ export class AuthController {
     description: 'Redireciona para a tela de login do Google',
   })
   @ApiServiceUnavailableResponse({
+    type: ErrorResponseDto,
     description: 'Login com Google não configurado',
   })
   async loginGoogle(@Res() res: Response): Promise<void> {
@@ -148,7 +156,10 @@ export class AuthController {
   @ApiCookieAuth()
   @ApiOperation({ summary: 'Usuário logado' })
   @ApiOkResponse({ type: UsuarioResponseDto })
-  @ApiUnauthorizedResponse({ description: 'Não autenticado' })
+  @ApiUnauthorizedResponse({
+    type: ErrorResponseDto,
+    description: 'Não autenticado',
+  })
   me(@UsuarioAtual() usuario: UsuarioAutenticado): Promise<UsuarioResponseDto> {
     return this.authService.usuarioLogado(usuario.id);
   }

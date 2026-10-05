@@ -1,5 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { hash } from 'bcryptjs';
+import { CodigoErro } from '../../common/errors/codigos-erro.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { CriarUsuarioDto } from './dto/criar-usuario.dto.js';
@@ -25,8 +26,10 @@ export type ContaUsuario = Prisma.UsuarioGetPayload<{
   select: typeof CAMPOS_CONTA;
 }>;
 
-const MENSAGEM_EMAIL_EM_USO =
-  'Já existe um usuário cadastrado com este e-mail.';
+const EMAIL_EM_USO = {
+  code: CodigoErro.EMAIL_JA_CADASTRADO,
+  message: 'Já existe um usuário cadastrado com este e-mail.',
+};
 
 @Injectable()
 export class UsuariosService {
@@ -82,7 +85,7 @@ export class UsuariosService {
       select: { id: true },
     });
     if (existente) {
-      throw new ConflictException(MENSAGEM_EMAIL_EM_USO);
+      throw new ConflictException(EMAIL_EM_USO);
     }
 
     const senhaHash = await hash(dto.senha, BCRYPT_CUSTO);
@@ -97,7 +100,7 @@ export class UsuariosService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException(MENSAGEM_EMAIL_EM_USO);
+        throw new ConflictException(EMAIL_EM_USO);
       }
       throw error;
     }

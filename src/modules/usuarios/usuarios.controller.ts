@@ -6,6 +6,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { ErrorResponseDto } from '../../common/dto/error-response.dto.js';
 import { Public } from '../../common/decorators/public.decorator.js';
 import { CriarUsuarioDto } from './dto/criar-usuario.dto.js';
 import { UsuarioResponseDto } from './dto/usuario-response.dto.js';
@@ -20,8 +21,14 @@ export class UsuariosController {
   @Post()
   @ApiOperation({ summary: 'Cadastra um usuário com e-mail e senha' })
   @ApiCreatedResponse({ type: UsuarioResponseDto })
-  @ApiBadRequestResponse({ description: 'Dados inválidos' })
-  @ApiConflictResponse({ description: 'E-mail já cadastrado' })
+  @ApiBadRequestResponse({
+    type: ErrorResponseDto,
+    description: 'Dados inválidos',
+  })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: 'E-mail já cadastrado',
+  })
   criar(@Body() dto: CriarUsuarioDto): Promise<UsuarioResponseDto> {
     return this.usuariosService.criar(dto);
   }
