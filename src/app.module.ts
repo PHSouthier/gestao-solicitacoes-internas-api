@@ -5,6 +5,8 @@ import { DadosInvalidosException } from './common/errors/dados-invalidos.excepti
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { AreasModule } from './modules/areas/areas.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { SolicitacoesModule } from './modules/solicitacoes/solicitacoes.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { UsuariosModule } from './modules/usuarios/usuarios.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -17,6 +19,8 @@ import { PrismaModule } from './prisma/prisma.module.js';
     UsuariosModule,
     AuthModule,
     AreasModule,
+    SolicitacoesModule,
+    DashboardModule,
   ],
   providers: [
     {
