@@ -30,6 +30,7 @@ import { PerfisGuard } from './perfis.guard.js';
     AuthService,
     GoogleOAuthService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PerfisGuard },
   ],
 })
 export class AuthModule {}
