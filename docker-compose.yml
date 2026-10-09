@@ -63,6 +63,19 @@ services:
       start_period: 10s
       retries: 10
 
+  web:
+    profiles: ["full"]
+    build:
+      context: ../gestao-solicitacoes-internas-web
+      args:
+        API_INTERNAL_URL: http://api:3001
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
 networks:
   default:
     name: gestao-net
