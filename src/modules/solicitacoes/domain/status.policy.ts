@@ -1,7 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import type { StatusSolicitacao } from '../../../generated/prisma/enums.js';
 
-/** Para quais status cada status pode ir. Aprovada e Rejeitada são finais. */
 const TRANSICOES: Record<StatusSolicitacao, readonly StatusSolicitacao[]> = {
   ABERTA: ['EM_ANALISE', 'APROVADA', 'REJEITADA'],
   EM_ANALISE: ['APROVADA', 'REJEITADA'],
@@ -20,7 +19,6 @@ export function estaFinalizada(status: StatusSolicitacao): boolean {
   return TRANSICOES[status].length === 0;
 }
 
-/** Lança 409 se a solicitação não puder ir do status `de` para o `para`. */
 export function garantirTransicao(
   de: StatusSolicitacao,
   para: StatusSolicitacao,

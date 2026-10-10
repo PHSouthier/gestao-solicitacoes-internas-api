@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -14,6 +13,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { ApiErros } from '../../common/decorators/api-erros.decorator.js';
+import { IdParamDto } from '../../common/dto/id-param.dto.js';
 import { Perfis, UsuarioAtual } from '../auth/auth.decorators.js';
 import type { UsuarioAutenticado } from '../auth/auth.types.js';
 import { AtualizarSolicitacaoDto } from './dto/atualizar-solicitacao.dto.js';
@@ -27,12 +28,14 @@ import {
 import { SolicitacoesService } from './solicitacoes.service.js';
 
 @ApiTags('Solicitações')
+@ApiErros(401)
 @Controller('solicitacoes')
 export class SolicitacoesController {
   constructor(private readonly service: SolicitacoesService) {}
 
   /** Lista com busca, filtros, ordenação e paginação. */
   @Get()
+  @ApiErros({ 400: 'Parâmetros de busca inválidos' })
   listar(
     @Query() query: ListarSolicitacoesQuery,
   ): Promise<PaginaSolicitacoesDto> {
@@ -41,14 +44,14 @@ export class SolicitacoesController {
 
   /** Detalhe com o histórico de status. */
   @Get(':id')
-  detalhar(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<SolicitacaoDetalheDto> {
+  @ApiErros(400, 404)
+  detalhar(@Param() { id }: IdParamDto): Promise<SolicitacaoDetalheDto> {
     return this.service.detalhar(id);
   }
 
   /** Cadastra uma solicitação (nasce com status Aberta). */
   @Post()
+  @ApiErros({ 400: 'Dados inválidos ou área inativa' })
   async criar(
     @Body() dto: CriarSolicitacaoDto,
     @UsuarioAtual() usuario: UsuarioAutenticado,
@@ -61,8 +64,12 @@ export class SolicitacoesController {
 
   /** Edita os dados enquanto Aberta ou Em Análise. Solicitante só edita as que cadastrou. */
   @Patch(':id')
+  @ApiErros(400, 404, {
+    403: 'Solicitação de outra pessoa',
+    409: 'Finalizada ou alterada por outra pessoa',
+  })
   atualizar(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param() { id }: IdParamDto,
     @Body() dto: AtualizarSolicitacaoDto,
     @UsuarioAtual() usuario: UsuarioAutenticado,
   ): Promise<SolicitacaoDetalheDto> {
@@ -73,8 +80,12 @@ export class SolicitacoesController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Perfis('SOLICITANTE', 'ADMINISTRADOR')
+  @ApiErros(400, 404, {
+    403: 'Perfil sem permissão ou solicitação de outra pessoa',
+    409: 'Status diferente de Aberta',
+  })
   excluir(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param() { id }: IdParamDto,
     @UsuarioAtual() usuario: UsuarioAutenticado,
   ): Promise<void> {
     return this.service.excluir(id, usuario);
@@ -84,8 +95,12 @@ export class SolicitacoesController {
   @Post(':id/analise')
   @HttpCode(HttpStatus.OK)
   @Perfis('ANALISTA', 'ADMINISTRADOR')
+  @ApiErros(400, 404, {
+    403: 'Somente analista ou administrador',
+    409: 'Transição inválida ou alterada por outra pessoa',
+  })
   iniciarAnalise(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param() { id }: IdParamDto,
     @UsuarioAtual() usuario: UsuarioAutenticado,
   ): Promise<SolicitacaoDetalheDto> {
     return this.service.iniciarAnalise(id, usuario);
@@ -95,8 +110,13 @@ export class SolicitacoesController {
   @Post(':id/decisao')
   @HttpCode(HttpStatus.OK)
   @Perfis('ANALISTA', 'ADMINISTRADOR')
+  @ApiErros(404, {
+    400: 'Comentário ausente ou dados inválidos',
+    403: 'Somente analista ou administrador',
+    409: 'Já finalizada ou decidida por outra pessoa',
+  })
   decidir(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param() { id }: IdParamDto,
     @Body() dto: DecisaoDto,
     @UsuarioAtual() usuario: UsuarioAutenticado,
   ): Promise<SolicitacaoDetalheDto> {

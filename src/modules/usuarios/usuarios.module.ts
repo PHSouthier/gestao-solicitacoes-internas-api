@@ -6,7 +6,6 @@ import { UsuariosService } from './usuarios.service.js';
 @Module({
   controllers: [UsuariosController],
   providers: [UsuariosService, UsuariosRepository],
-  // A autenticação busca e cria usuários pelo repository.
   exports: [UsuariosRepository],
 })
 export class UsuariosModule {}

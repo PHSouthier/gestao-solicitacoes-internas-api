@@ -11,8 +11,9 @@ import {
   Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
+import { ApiExcludeEndpoint, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { ApiErros } from '../../common/decorators/api-erros.decorator.js';
 import { UsuarioResponseDto } from '../usuarios/dto/usuario-response.dto.js';
 import {
   COOKIE_LOGIN_GOOGLE,
@@ -41,6 +42,7 @@ export class AuthController {
   /** Login com e-mail e senha. Em caso de sucesso, grava o JWT no cookie `access_token`. */
   @Public()
   @Post('login')
+  @ApiErros(400, { 401: 'E-mail ou senha inválidos' })
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() dto: LoginDto,
@@ -62,6 +64,11 @@ export class AuthController {
   /** Login com Google: redireciona para o Google (abra no navegador, não pelo "Try it out"). */
   @Public()
   @Get('google')
+  @ApiResponse({
+    status: 302,
+    description: 'Redireciona para a tela de login do Google',
+  })
+  @ApiErros({ 503: 'Login com Google não configurado' })
   async loginGoogle(@Res() res: Response): Promise<void> {
     const { url, inicio } = await this.google.iniciar();
     res.cookie(COOKIE_LOGIN_GOOGLE, inicio, {
@@ -95,6 +102,7 @@ export class AuthController {
 
   /** Usuário logado. */
   @Get('me')
+  @ApiErros(401)
   me(@UsuarioAtual() usuario: UsuarioAutenticado): Promise<UsuarioResponseDto> {
     return this.authService.usuarioLogado(usuario.id);
   }

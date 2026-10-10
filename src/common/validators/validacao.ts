@@ -3,15 +3,14 @@ import {
   type ValidationError,
   ValidationPipe,
 } from '@nestjs/common';
-import type { DetalheErro } from '../filters/all-exceptions.filter.js';
+import type { ErrorDetailDto } from '../dto/error-response.dto.js';
 
 const DADOS_INVALIDOS = 'Dados inválidos.';
 
-/** Valida o corpo e a query de todas as rotas pelos DTOs (class-validator). */
 export const validacaoGlobal = new ValidationPipe({
-  whitelist: true, // descarta campos que não estão no DTO
-  forbidNonWhitelisted: true, // e responde 400 se vierem campos extras
-  transform: true, // aplica os @Transform e converte para a classe do DTO
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transform: true,
   exceptionFactory: (erros) =>
     new BadRequestException({
       message: DADOS_INVALIDOS,
@@ -19,12 +18,10 @@ export const validacaoGlobal = new ValidationPipe({
     }),
 });
 
-/** Para usar com `@Transform`: tira os espaços do começo e do fim dos textos. */
 export function aparar({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }
 
-/** Erro 400 apontando um campo, para validações que dependem do banco. */
 export function campoInvalido(
   field: string,
   mensagem: string,
@@ -35,7 +32,7 @@ export function campoInvalido(
   });
 }
 
-function errosPorCampo(erros: ValidationError[], pai = ''): DetalheErro[] {
+function errosPorCampo(erros: ValidationError[], pai = ''): ErrorDetailDto[] {
   return erros.flatMap((erro) => {
     const field = pai ? `${pai}.${erro.property}` : erro.property;
     const proprios = erro.constraints

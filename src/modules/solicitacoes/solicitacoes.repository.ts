@@ -67,10 +67,8 @@ export interface MudancaDeStatus {
   usuarioId: string;
 }
 
-/** A exclusão é lógica: as excluídas ficam no banco, mas nunca aparecem. */
 const NAO_EXCLUIDA = { excluidoEm: null };
 
-/** Acesso ao banco das solicitações. As regras de negócio ficam no service. */
 @Injectable()
 export class SolicitacoesRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -99,7 +97,6 @@ export class SolicitacoesRepository {
     return { linhas, total };
   }
 
-  /** Cria a solicitação e o primeiro registro do histórico (status Aberta), juntos. */
   async criar(dados: DadosSolicitacao, usuarioId: string): Promise<string> {
     const { id } = await this.prisma.solicitacao.create({
       data: {
@@ -114,7 +111,6 @@ export class SolicitacoesRepository {
     return id;
   }
 
-  /** Devolve false se o status mudou desde a leitura (ver `gravarSeNaoMudou`). */
   atualizar(
     id: string,
     statusLido: StatusSolicitacao,
@@ -123,14 +119,12 @@ export class SolicitacoesRepository {
     return this.gravarSeNaoMudou(this.prisma, id, statusLido, dados);
   }
 
-  /** Exclusão lógica. Devolve false se o status mudou desde a leitura. */
   excluir(id: string, statusLido: StatusSolicitacao): Promise<boolean> {
     return this.gravarSeNaoMudou(this.prisma, id, statusLido, {
       excluidoEm: new Date(),
     });
   }
 
-  /** Muda o status e registra no histórico, na mesma transação. Devolve false se o status mudou desde a leitura. */
   mudarStatus(m: MudancaDeStatus): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       const mudou = await this.gravarSeNaoMudou(tx, m.id, m.de, {
@@ -158,11 +152,6 @@ export class SolicitacoesRepository {
     });
   }
 
-  /**
-   * Grava só se a solicitação ainda estiver no status em que foi lida. Se outra
-   * pessoa mudou o status nesse meio-tempo (ex.: dois analistas decidindo ao
-   * mesmo tempo), nada é gravado e o retorno é false.
-   */
   private async gravarSeNaoMudou(
     db: Prisma.TransactionClient,
     id: string,
@@ -193,7 +182,6 @@ function montarFiltro(
   };
 }
 
-/** Procura no título, descrição e solicitante; se parecer um código (SOL-000042, 42), também pelo código. */
 function filtroDeBusca(busca: string): Prisma.SolicitacaoWhereInput[] {
   const contem = { contains: busca, mode: 'insensitive' as const };
   const filtros: Prisma.SolicitacaoWhereInput[] = [

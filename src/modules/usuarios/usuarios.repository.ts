@@ -4,7 +4,6 @@ import type { PerfilUsuario } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { UsuarioResponseDto } from './dto/usuario-response.dto.js';
 
-/** Campos que podem sair na resposta (nunca a senha). */
 const CAMPOS_PUBLICOS = {
   id: true,
   nome: true,
@@ -13,7 +12,6 @@ const CAMPOS_PUBLICOS = {
   criadoEm: true,
 } satisfies Prisma.UsuarioSelect;
 
-/** Campos usados pelo login com Google. */
 const CAMPOS_CONTA = {
   ...CAMPOS_PUBLICOS,
   ativo: true,
@@ -24,12 +22,10 @@ export type ContaUsuario = Prisma.UsuarioGetPayload<{
   select: typeof CAMPOS_CONTA;
 }>;
 
-/** Acesso ao banco dos usuários. Usado pelo módulo de usuários e pela autenticação. */
 @Injectable()
 export class UsuariosRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Devolve null se o e-mail já estiver cadastrado. */
   async criar(dados: {
     nome: string;
     email: string;
@@ -116,7 +112,6 @@ export class UsuariosRepository {
   }
 }
 
-/** O e-mail é único no banco: violar a constraint gera o erro P2002 do Prisma. */
 function violouCampoUnico(erro: unknown): boolean {
   return (
     erro instanceof Prisma.PrismaClientKnownRequestError &&

@@ -23,7 +23,6 @@ import {
 } from './solicitacoes.repository.js';
 import { estaFinalizada, garantirTransicao } from './domain/status.policy.js';
 
-/** Regras de negócio das solicitações. O acesso ao banco fica no repository. */
 @Injectable()
 export class SolicitacoesService {
   constructor(private readonly repositorio: SolicitacoesRepository) {}
@@ -72,7 +71,6 @@ export class SolicitacoesService {
     return this.detalhar(id);
   }
 
-  /** Edita os dados cadastrais (o status muda só pela análise e decisão). */
   async atualizar(
     id: string,
     dto: AtualizarSolicitacaoDto,
@@ -114,7 +112,6 @@ export class SolicitacoesService {
     return this.detalhar(id);
   }
 
-  /** Exclusão lógica: só com status Aberta. */
   async excluir(id: string, usuario: UsuarioAutenticado): Promise<void> {
     const atual = await this.buscar(id);
     garantirAutor(atual, usuario, 'excluir');
@@ -142,7 +139,6 @@ export class SolicitacoesService {
     return this.mudarStatus(id, decisao, usuario, comentario);
   }
 
-  /** Muda o status e registra no histórico quem mudou, quando e o comentário. */
   private async mudarStatus(
     id: string,
     para: StatusSolicitacao,
@@ -172,7 +168,6 @@ export class SolicitacoesService {
     return solicitacao;
   }
 
-  /** A área precisa estar ativa. O complemento só é gravado (e exigido) na área "Outras". */
   private async validarArea(
     areaId: number,
     complemento?: string,
@@ -194,7 +189,6 @@ export class SolicitacoesService {
   }
 }
 
-/** O solicitante só edita e exclui as solicitações que ele mesmo cadastrou. */
 function garantirAutor(
   solicitacao: LinhaDetalhe,
   usuario: UsuarioAutenticado,
@@ -210,7 +204,6 @@ function garantirAutor(
   }
 }
 
-/** O repository devolve false quando outra pessoa mudou o status entre a leitura e a gravação. */
 function garantirQueGravou(gravou: boolean): void {
   if (!gravou) {
     throw new ConflictException(

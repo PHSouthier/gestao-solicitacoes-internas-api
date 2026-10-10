@@ -5,14 +5,12 @@ import type {
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-/** Contagens das solicitações (sem as excluídas), como vêm do banco. */
 export interface ContagensDashboard {
   porStatus: { status: StatusSolicitacao; total: number }[];
   porPrioridade: { prioridade: PrioridadeSolicitacao; total: number }[];
   porArea: { areaId: number; nome: string; total: number }[];
 }
 
-/** Acesso ao banco do dashboard. */
 @Injectable()
 export class DashboardRepository {
   constructor(private readonly prisma: PrismaService) {}

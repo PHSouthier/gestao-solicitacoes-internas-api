@@ -8,15 +8,10 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { STATUS_CODES } from 'node:http';
+import type { ErrorDetailDto } from '../dto/error-response.dto.js';
 import type { RequestComId } from '../middleware/request-id.middleware.js';
 
-export interface DetalheErro {
-  field: string;
-  messages: string[];
-}
-
-/** Código estável por status HTTP, para o cliente tratar o erro sem depender do texto. */
-const CODIGO_POR_STATUS: Record<number, string> = {
+export const CODIGO_POR_STATUS: Record<number, string> = {
   [HttpStatus.BAD_REQUEST]: 'DADOS_INVALIDOS',
   [HttpStatus.UNAUTHORIZED]: 'NAO_AUTENTICADO',
   [HttpStatus.FORBIDDEN]: 'SEM_PERMISSAO',
@@ -26,10 +21,6 @@ const CODIGO_POR_STATUS: Record<number, string> = {
   [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICO_INDISPONIVEL',
 };
 
-/**
- * Responde todos os erros no mesmo formato:
- * `{ statusCode, error, code, message, details, path, timestamp, requestId }`.
- */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -73,7 +64,7 @@ function lerErro(exception: unknown) {
   const { message, details = [] } =
     typeof corpo === 'string'
       ? { message: corpo }
-      : (corpo as { message: string | string[]; details?: DetalheErro[] });
+      : (corpo as { message: string | string[]; details?: ErrorDetailDto[] });
 
   return {
     statusCode: exception.getStatus(),

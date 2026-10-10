@@ -16,10 +16,6 @@ import type {
   UsuarioAutenticado,
 } from './auth.types.js';
 
-/**
- * Guard global: toda rota exige login (JWT no cookie de sessão), menos as marcadas
- * com `@Public()`. Se a rota tiver `@Perfis(...)`, o perfil do usuário precisa estar na lista.
- */
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(

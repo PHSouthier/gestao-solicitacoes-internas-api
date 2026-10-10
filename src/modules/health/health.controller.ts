@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { ApiErros } from '../../common/decorators/api-erros.decorator.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { Public } from '../auth/auth.decorators.js';
 import { HealthResponseDto } from './dto/health-response.dto.js';
@@ -19,6 +20,7 @@ export class HealthController {
 
   /** Verifica se a API está no ar e alcança o banco (usado pelo healthcheck do Docker). */
   @Get()
+  @ApiErros({ 503: 'Banco de dados indisponível' })
   async check(): Promise<HealthResponseDto> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;

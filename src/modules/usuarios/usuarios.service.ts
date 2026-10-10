@@ -11,12 +11,10 @@ import { UsuariosRepository } from './usuarios.repository.js';
 
 export const BCRYPT_CUSTO = 12;
 
-/** Regras de negócio dos usuários. O acesso ao banco fica no repository. */
 @Injectable()
 export class UsuariosService {
   constructor(private readonly repositorio: UsuariosRepository) {}
 
-  /** Cadastra com perfil Solicitante (o padrão do banco), guardando só o hash da senha. */
   async criar(dto: CriarUsuarioDto): Promise<UsuarioResponseDto> {
     const usuario = await this.repositorio.criar({
       nome: dto.nome,

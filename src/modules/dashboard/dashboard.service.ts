@@ -5,7 +5,6 @@ import {
 } from './dashboard.repository.js';
 import type { ResumoDashboardDto } from './dto/resumo-dashboard.dto.js';
 
-/** Monta os indicadores a partir das contagens do repository. */
 @Injectable()
 export class DashboardService {
   constructor(private readonly repositorio: DashboardRepository) {}
@@ -15,7 +14,6 @@ export class DashboardService {
   }
 }
 
-/** Preenche com zero o que não tem solicitação, ordena as áreas e calcula a taxa de aprovação. */
 export function montarResumo(dados: ContagensDashboard): ResumoDashboardDto {
   const porStatus = { ABERTA: 0, EM_ANALISE: 0, APROVADA: 0, REJEITADA: 0 };
   for (const { status, total } of dados.porStatus) porStatus[status] = total;

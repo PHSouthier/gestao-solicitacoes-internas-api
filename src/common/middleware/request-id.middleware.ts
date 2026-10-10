@@ -6,10 +6,6 @@ const ID_VALIDO = /^[\w.:-]{1,128}$/;
 
 export type RequestComId = Request & { id?: string };
 
-/**
- * Dá um id a cada requisição (reaproveita o `x-request-id` recebido, se for válido)
- * e devolve no header da resposta. Ajuda a achar a requisição nos logs.
- */
 export function requestIdMiddleware(
   req: RequestComId,
   res: Response,

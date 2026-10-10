@@ -5,9 +5,6 @@ import type {
 } from './dto/solicitacao-response.dto.js';
 import type { LinhaDetalhe, LinhaResumo } from './solicitacoes.repository.js';
 
-// Converte as linhas do banco no formato das respostas da API.
-
-/** 42n → "SOL-000042" */
 export function formatarCodigo(codigo: bigint): string {
   return `SOL-${codigo.toString().padStart(6, '0')}`;
 }

@@ -7,7 +7,7 @@ import { COOKIE_SESSAO } from './modules/auth/auth-cookie.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   configurarApp(app);
-  app.enableShutdownHooks(); // fecha a conexão com o banco quando o container para
+  app.enableShutdownHooks();
 
   const swagger = new DocumentBuilder()
     .setTitle('Gestão de Solicitações Internas — API')

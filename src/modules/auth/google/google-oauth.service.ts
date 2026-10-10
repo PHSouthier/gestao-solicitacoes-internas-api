@@ -11,12 +11,10 @@ export interface PerfilGoogle {
   nome: string;
 }
 
-/** Dados do retorno do Google para a rota de callback. */
 export interface RetornoGoogle {
   code?: string;
   state?: string;
   erro?: string;
-  /** Valor do cookie gravado em `iniciar()`. */
   inicio?: unknown;
 }
 
@@ -25,10 +23,6 @@ interface InicioLogin {
   codeVerifier: string;
 }
 
-/**
- * Login com Google (OAuth 2.0 com PKCE). Fica desligado quando as variáveis
- * GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_CALLBACK_URL não estão definidas.
- */
 @Injectable()
 export class GoogleOAuthService {
   private readonly cliente?: OAuth2Client;
@@ -45,7 +39,6 @@ export class GoogleOAuthService {
     }
   }
 
-  /** Monta a URL do Google e o valor do cookie que será conferido na volta. */
   async iniciar(): Promise<{ url: string; inicio: string }> {
     const cliente = this.exigirCliente();
     const state = randomBytes(32).toString('base64url');
@@ -64,7 +57,6 @@ export class GoogleOAuthService {
     return { url, inicio: JSON.stringify(inicio) };
   }
 
-  /** Confere o retorno do Google e devolve os dados da conta. */
   async concluir({
     code,
     state,
@@ -115,7 +107,6 @@ export class GoogleOAuthService {
   }
 }
 
-/** Lê o cookie do início do login; se estiver ausente ou adulterado, devolve null. */
 function lerInicio(valor: unknown): InicioLogin | null {
   try {
     const dados = JSON.parse(String(valor)) as Partial<InicioLogin>;

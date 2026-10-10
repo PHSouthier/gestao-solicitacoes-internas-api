@@ -11,10 +11,6 @@ import type { LoginDto } from './dto/login.dto.js';
 import { ErroLoginGoogle } from './google/erro-login-google.js';
 import type { PerfilGoogle } from './google/google-oauth.service.js';
 
-/**
- * Hash de uma senha qualquer. Quando o e-mail não existe, a senha é comparada com ele
- * para a resposta demorar o mesmo tempo e não revelar quais e-mails estão cadastrados.
- */
 const HASH_FALSO =
   '$2b$12$cEb3aS1Ue8KmMof1ijEfHuQyjSn24OHjQ9KwPwvx/kTQ4gNet3Juu';
 
@@ -64,7 +60,6 @@ export class AuthService {
     return usuario;
   }
 
-  /** Primeiro login com Google: vincula a uma conta com o mesmo e-mail ou cria uma nova. */
   private async vincularOuCriarComGoogle(
     perfil: PerfilGoogle,
   ): Promise<ContaUsuario> {
