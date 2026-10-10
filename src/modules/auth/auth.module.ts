@@ -4,10 +4,9 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { UsuariosModule } from '../usuarios/usuarios.module.js';
 import { AuthController } from './auth.controller.js';
+import { AuthGuard } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
 import { GoogleOAuthService } from './google/google-oauth.service.js';
-import { JwtAuthGuard } from './jwt-auth.guard.js';
-import { PerfisGuard } from './perfis.guard.js';
 
 @Module({
   imports: [
@@ -17,7 +16,7 @@ import { PerfisGuard } from './perfis.guard.js';
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: config.get<string>(
+          expiresIn: config.get(
             'JWT_EXPIRES_IN',
             '8h',
           ) as JwtSignOptions['expiresIn'],
@@ -29,8 +28,7 @@ import { PerfisGuard } from './perfis.guard.js';
   providers: [
     AuthService,
     GoogleOAuthService,
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: PerfisGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })
 export class AuthModule {}

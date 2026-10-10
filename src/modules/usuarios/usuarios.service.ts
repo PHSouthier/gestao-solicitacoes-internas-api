@@ -4,93 +4,35 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { hash } from 'bcryptjs';
-import { CodigoErro } from '../../common/errors/codigos-erro.js';
-import { DomainError } from '../../common/errors/domain-error.js';
-import { Prisma } from '../../generated/prisma/client.js';
 import type { PerfilUsuario } from '../../generated/prisma/enums.js';
-import { PrismaService } from '../../prisma/prisma.service.js';
-import { CriarUsuarioDto } from './dto/criar-usuario.dto.js';
-import { UsuarioResponseDto } from './dto/usuario-response.dto.js';
+import type { CriarUsuarioDto } from './dto/criar-usuario.dto.js';
+import type { UsuarioResponseDto } from './dto/usuario-response.dto.js';
+import { UsuariosRepository } from './usuarios.repository.js';
 
 export const BCRYPT_CUSTO = 12;
 
-const CAMPOS_PUBLICOS = {
-  id: true,
-  nome: true,
-  email: true,
-  perfil: true,
-  criadoEm: true,
-} satisfies Prisma.UsuarioSelect;
-
-const CAMPOS_CONTA = {
-  ...CAMPOS_PUBLICOS,
-  ativo: true,
-  googleId: true,
-} satisfies Prisma.UsuarioSelect;
-
-export type ContaUsuario = Prisma.UsuarioGetPayload<{
-  select: typeof CAMPOS_CONTA;
-}>;
-
-const EMAIL_EM_USO = {
-  code: CodigoErro.EMAIL_JA_CADASTRADO,
-  message: 'Já existe um usuário cadastrado com este e-mail.',
-};
-
+/** Regras de negócio dos usuários. O acesso ao banco fica no repository. */
 @Injectable()
 export class UsuariosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repositorio: UsuariosRepository) {}
 
-  buscarParaLogin(email: string) {
-    return this.prisma.usuario.findUnique({
-      where: { email },
-      select: { ...CAMPOS_PUBLICOS, senhaHash: true, ativo: true },
+  /** Cadastra com perfil Solicitante (o padrão do banco), guardando só o hash da senha. */
+  async criar(dto: CriarUsuarioDto): Promise<UsuarioResponseDto> {
+    const usuario = await this.repositorio.criar({
+      nome: dto.nome,
+      email: dto.email,
+      senhaHash: await hash(dto.senha, BCRYPT_CUSTO),
     });
-  }
-
-  buscarAtivoPorId(id: string): Promise<UsuarioResponseDto | null> {
-    return this.prisma.usuario.findFirst({
-      where: { id, ativo: true },
-      select: CAMPOS_PUBLICOS,
-    });
-  }
-
-  buscarContaPorGoogleId(googleId: string): Promise<ContaUsuario | null> {
-    return this.prisma.usuario.findUnique({
-      where: { googleId },
-      select: CAMPOS_CONTA,
-    });
-  }
-
-  buscarContaPorEmail(email: string): Promise<ContaUsuario | null> {
-    return this.prisma.usuario.findUnique({
-      where: { email },
-      select: CAMPOS_CONTA,
-    });
-  }
-
-  vincularGoogle(id: string, googleId: string): Promise<ContaUsuario> {
-    return this.prisma.usuario.update({
-      where: { id },
-      data: { googleId },
-      select: CAMPOS_CONTA,
-    });
-  }
-
-  criarComGoogle(dados: {
-    nome: string;
-    email: string;
-    googleId: string;
-  }): Promise<ContaUsuario> {
-    return this.prisma.usuario.create({ data: dados, select: CAMPOS_CONTA });
+    if (!usuario) {
+      throw new ConflictException(
+        'Já existe um usuário cadastrado com este e-mail.',
+      );
+    }
+    return usuario;
   }
 
   listar(): Promise<UsuarioResponseDto[]> {
-    return this.prisma.usuario.findMany({
-      where: { ativo: true },
-      orderBy: { nome: 'asc' },
-      select: CAMPOS_PUBLICOS,
-    });
+    return this.repositorio.listarAtivos();
   }
 
   async alterarPerfil(
@@ -99,54 +41,13 @@ export class UsuariosService {
     idQuemAltera: string,
   ): Promise<UsuarioResponseDto> {
     if (id === idQuemAltera) {
-      throw new DomainError({
-        code: CodigoErro.ALTERACAO_DO_PROPRIO_PERFIL,
-        message: 'Você não pode alterar o seu próprio perfil.',
-      });
+      throw new ConflictException(
+        'Você não pode alterar o seu próprio perfil.',
+      );
     }
-
-    const existente = await this.prisma.usuario.findUnique({
-      where: { id },
-      select: { id: true },
-    });
-    if (!existente) {
-      throw new NotFoundException({
-        code: CodigoErro.USUARIO_NAO_ENCONTRADO,
-        message: 'Usuário não encontrado.',
-      });
+    if (!(await this.repositorio.existe(id))) {
+      throw new NotFoundException('Usuário não encontrado.');
     }
-
-    return this.prisma.usuario.update({
-      where: { id },
-      data: { perfil },
-      select: CAMPOS_PUBLICOS,
-    });
-  }
-
-  async criar(dto: CriarUsuarioDto): Promise<UsuarioResponseDto> {
-    const existente = await this.prisma.usuario.findUnique({
-      where: { email: dto.email },
-      select: { id: true },
-    });
-    if (existente) {
-      throw new ConflictException(EMAIL_EM_USO);
-    }
-
-    const senhaHash = await hash(dto.senha, BCRYPT_CUSTO);
-
-    try {
-      return await this.prisma.usuario.create({
-        data: { nome: dto.nome, email: dto.email, senhaHash },
-        select: CAMPOS_PUBLICOS,
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(EMAIL_EM_USO);
-      }
-      throw error;
-    }
+    return this.repositorio.alterarPerfil(id, perfil);
   }
 }

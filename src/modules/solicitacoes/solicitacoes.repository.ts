@@ -1,23 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../generated/prisma/client.js';
+import { paraData } from '../../common/validators/data.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 import type {
   PrioridadeSolicitacao,
   StatusSolicitacao,
 } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import type { ListarSolicitacoesQuery } from './dto/listar-solicitacoes.dto.js';
 
-const USUARIO_RESUMO = { select: { id: true, nome: true } } as const;
+const USUARIO = { select: { id: true, nome: true } } as const;
 
-export const SELECT_HISTORICO = {
-  id: true,
-  statusAnterior: true,
-  statusNovo: true,
-  comentario: true,
-  alteradoEm: true,
-  alteradoPor: USUARIO_RESUMO,
-} satisfies Prisma.HistoricoStatusSolicitacaoSelect;
-
-export const SELECT_RESUMO = {
+const CAMPOS_RESUMO = {
   id: true,
   codigo: true,
   titulo: true,
@@ -32,24 +25,31 @@ export const SELECT_RESUMO = {
   area: { select: { id: true, nome: true } },
 } satisfies Prisma.SolicitacaoSelect;
 
-export const SELECT_DETALHE = {
-  ...SELECT_RESUMO,
+const CAMPOS_DETALHE = {
+  ...CAMPOS_RESUMO,
   descricao: true,
-  criadoPor: USUARIO_RESUMO,
-  historico: { select: SELECT_HISTORICO, orderBy: { alteradoEm: 'asc' } },
+  criadoPor: USUARIO,
+  historico: {
+    orderBy: { alteradoEm: 'asc' },
+    select: {
+      id: true,
+      statusAnterior: true,
+      statusNovo: true,
+      comentario: true,
+      alteradoEm: true,
+      alteradoPor: USUARIO,
+    },
+  },
 } satisfies Prisma.SolicitacaoSelect;
 
 export type LinhaResumo = Prisma.SolicitacaoGetPayload<{
-  select: typeof SELECT_RESUMO;
+  select: typeof CAMPOS_RESUMO;
 }>;
 export type LinhaDetalhe = Prisma.SolicitacaoGetPayload<{
-  select: typeof SELECT_DETALHE;
-}>;
-export type LinhaHistorico = Prisma.HistoricoStatusSolicitacaoGetPayload<{
-  select: typeof SELECT_HISTORICO;
+  select: typeof CAMPOS_DETALHE;
 }>;
 
-export interface DadosNovaSolicitacao {
+export interface DadosSolicitacao {
   titulo: string;
   descricao: string;
   nomeSolicitante: string;
@@ -67,108 +67,143 @@ export interface MudancaDeStatus {
   usuarioId: string;
 }
 
+/** A exclusão é lógica: as excluídas ficam no banco, mas nunca aparecem. */
+const NAO_EXCLUIDA = { excluidoEm: null };
+
+/** Acesso ao banco das solicitações. As regras de negócio ficam no service. */
 @Injectable()
 export class SolicitacoesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   buscarDetalhe(id: string): Promise<LinhaDetalhe | null> {
     return this.prisma.solicitacao.findFirst({
-      where: { id, excluidoEm: null },
-      select: SELECT_DETALHE,
+      where: { id, ...NAO_EXCLUIDA },
+      select: CAMPOS_DETALHE,
     });
   }
 
   async listar(
-    where: Prisma.SolicitacaoWhereInput,
-    orderBy: Prisma.SolicitacaoOrderByWithRelationInput[],
-    pular: number,
-    pegar: number,
+    query: ListarSolicitacoesQuery,
   ): Promise<{ linhas: LinhaResumo[]; total: number }> {
-    const filtro = { ...where, excluidoEm: null };
+    const where = { ...montarFiltro(query), ...NAO_EXCLUIDA };
     const [linhas, total] = await this.prisma.$transaction([
       this.prisma.solicitacao.findMany({
-        where: filtro,
-        orderBy,
-        skip: pular,
-        take: pegar,
-        select: SELECT_RESUMO,
+        where,
+        orderBy: [{ [query.ordenarPor]: query.ordem }, { codigo: 'desc' }],
+        skip: (query.pagina - 1) * query.tamanhoPagina,
+        take: query.tamanhoPagina,
+        select: CAMPOS_RESUMO,
       }),
-      this.prisma.solicitacao.count({ where: filtro }),
+      this.prisma.solicitacao.count({ where }),
     ]);
     return { linhas, total };
   }
 
-  criar(dados: DadosNovaSolicitacao, usuarioId: string): Promise<string> {
-    return this.prisma.$transaction(async (tx) => {
-      const { id } = await tx.solicitacao.create({
-        data: { ...dados, criadoPorId: usuarioId },
-        select: { id: true },
-      });
-      await tx.historicoStatusSolicitacao.create({
-        data: {
-          solicitacaoId: id,
-          statusAnterior: null,
-          statusNovo: 'ABERTA',
-          alteradoPorId: usuarioId,
+  /** Cria a solicitação e o primeiro registro do histórico (status Aberta), juntos. */
+  async criar(dados: DadosSolicitacao, usuarioId: string): Promise<string> {
+    const { id } = await this.prisma.solicitacao.create({
+      data: {
+        ...dados,
+        criadoPorId: usuarioId,
+        historico: {
+          create: { statusNovo: 'ABERTA', alteradoPorId: usuarioId },
         },
-      });
-      return id;
+      },
+      select: { id: true },
     });
+    return id;
   }
 
-  async atualizar(
+  /** Devolve false se o status mudou desde a leitura (ver `gravarSeNaoMudou`). */
+  atualizar(
     id: string,
-    dados: Prisma.SolicitacaoUncheckedUpdateManyInput,
+    statusLido: StatusSolicitacao,
+    dados: Partial<DadosSolicitacao>,
   ): Promise<boolean> {
-    const { count } = await this.prisma.solicitacao.updateMany({
-      where: { id, excluidoEm: null, status: { in: ['ABERTA', 'EM_ANALISE'] } },
-      data: dados,
-    });
-    return count === 1;
+    return this.gravarSeNaoMudou(this.prisma, id, statusLido, dados);
   }
 
-  async excluir(id: string): Promise<boolean> {
-    const { count } = await this.prisma.solicitacao.updateMany({
-      where: { id, excluidoEm: null, status: 'ABERTA' },
-      data: { excluidoEm: new Date() },
+  /** Exclusão lógica. Devolve false se o status mudou desde a leitura. */
+  excluir(id: string, statusLido: StatusSolicitacao): Promise<boolean> {
+    return this.gravarSeNaoMudou(this.prisma, id, statusLido, {
+      excluidoEm: new Date(),
     });
-    return count === 1;
   }
 
+  /** Muda o status e registra no histórico, na mesma transação. Devolve false se o status mudou desde a leitura. */
   mudarStatus(m: MudancaDeStatus): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.solicitacao.updateMany({
-        where: { id: m.id, status: m.de, excluidoEm: null },
-        data: { status: m.para },
+      const mudou = await this.gravarSeNaoMudou(tx, m.id, m.de, {
+        status: m.para,
       });
-      if (count !== 1) {
-        return false;
+      if (mudou) {
+        await tx.historicoStatusSolicitacao.create({
+          data: {
+            solicitacaoId: m.id,
+            statusAnterior: m.de,
+            statusNovo: m.para,
+            comentario: m.comentario,
+            alteradoPorId: m.usuarioId,
+          },
+        });
       }
-      await tx.historicoStatusSolicitacao.create({
-        data: {
-          solicitacaoId: m.id,
-          statusAnterior: m.de,
-          statusNovo: m.para,
-          comentario: m.comentario ?? null,
-          alteradoPorId: m.usuarioId,
-        },
-      });
-      return true;
-    });
-  }
-
-  historico(id: string): Promise<LinhaHistorico[]> {
-    return this.prisma.historicoStatusSolicitacao.findMany({
-      where: { solicitacaoId: id },
-      orderBy: { alteradoEm: 'asc' },
-      select: SELECT_HISTORICO,
+      return mudou;
     });
   }
 
   buscarAreaAtiva(id: number) {
     return this.prisma.area.findFirst({
       where: { id, ativo: true },
-      select: { id: true, exigeComplemento: true },
+      select: { exigeComplemento: true },
     });
   }
+
+  /**
+   * Grava só se a solicitação ainda estiver no status em que foi lida. Se outra
+   * pessoa mudou o status nesse meio-tempo (ex.: dois analistas decidindo ao
+   * mesmo tempo), nada é gravado e o retorno é false.
+   */
+  private async gravarSeNaoMudou(
+    db: Prisma.TransactionClient,
+    id: string,
+    statusLido: StatusSolicitacao,
+    data: Prisma.SolicitacaoUncheckedUpdateManyInput,
+  ): Promise<boolean> {
+    const { count } = await db.solicitacao.updateMany({
+      where: { id, status: statusLido, ...NAO_EXCLUIDA },
+      data,
+    });
+    return count === 1;
+  }
+}
+
+function montarFiltro(
+  query: ListarSolicitacoesQuery,
+): Prisma.SolicitacaoWhereInput {
+  const { status, prioridade, areaId, dataInicio, dataFim, busca } = query;
+  return {
+    status: status?.length ? { in: status } : undefined,
+    prioridade: prioridade?.length ? { in: prioridade } : undefined,
+    areaId,
+    dataSolicitacao: {
+      gte: dataInicio ? paraData(dataInicio) : undefined,
+      lte: dataFim ? paraData(dataFim) : undefined,
+    },
+    OR: busca ? filtroDeBusca(busca) : undefined,
+  };
+}
+
+/** Procura no título, descrição e solicitante; se parecer um código (SOL-000042, 42), também pelo código. */
+function filtroDeBusca(busca: string): Prisma.SolicitacaoWhereInput[] {
+  const contem = { contains: busca, mode: 'insensitive' as const };
+  const filtros: Prisma.SolicitacaoWhereInput[] = [
+    { titulo: contem },
+    { descricao: contem },
+    { nomeSolicitante: contem },
+  ];
+  const codigo = /^(?:sol-?)?0*(\d{1,15})$/i.exec(busca);
+  if (codigo) {
+    filtros.push({ codigo: BigInt(codigo[1]) });
+  }
+  return filtros;
 }

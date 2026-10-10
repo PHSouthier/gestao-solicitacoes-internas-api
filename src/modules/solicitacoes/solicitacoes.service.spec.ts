@@ -1,6 +1,10 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { DomainError } from '../../common/errors/domain-error.js';
 import type { UsuarioAutenticado } from '../auth/auth.types.js';
 import { SolicitacoesRepository } from './solicitacoes.repository.js';
 import { SolicitacoesService } from './solicitacoes.service.js';
@@ -9,12 +13,11 @@ describe('SolicitacoesService', () => {
   const repositorio = {
     buscarDetalhe: vi.fn(),
     buscarAreaAtiva: vi.fn(),
+    listar: vi.fn(),
     criar: vi.fn(),
     atualizar: vi.fn(),
     excluir: vi.fn(),
     mudarStatus: vi.fn(),
-    listar: vi.fn(),
-    historico: vi.fn(),
   };
   let service: SolicitacoesService;
 
@@ -48,7 +51,7 @@ describe('SolicitacoesService', () => {
     };
   }
 
-  const novo = {
+  const nova = {
     titulo: 'Compra de notebooks',
     descricao: 'Cinco notebooks para vendas.',
     nomeSolicitante: 'Maria',
@@ -56,9 +59,13 @@ describe('SolicitacoesService', () => {
     prioridade: 'ALTA' as const,
   };
 
-  async function codigoDoErro(promessa: Promise<unknown>) {
+  async function camposComErro(promessa: Promise<unknown>) {
     const erro = await promessa.catch((e: unknown) => e);
-    return (erro as DomainError).code;
+    expect(erro).toBeInstanceOf(BadRequestException);
+    const { details } = (erro as BadRequestException).getResponse() as {
+      details: { field: string }[];
+    };
+    return details.map((d) => d.field);
   }
 
   beforeEach(async () => {
@@ -75,14 +82,13 @@ describe('SolicitacoesService', () => {
   describe('criar', () => {
     it('cria com o usuário logado e devolve o código formatado', async () => {
       repositorio.buscarAreaAtiva.mockResolvedValue({
-        id: 9,
         exigeComplemento: false,
       });
       repositorio.criar.mockResolvedValue('s-1');
       repositorio.buscarDetalhe.mockResolvedValue(solicitacao());
 
       const criada = await service.criar(
-        { ...novo, areaComplemento: 'ignorado' },
+        { ...nova, areaComplemento: 'ignorado' },
         solicitante,
       );
 
@@ -93,27 +99,23 @@ describe('SolicitacoesService', () => {
       expect(dados.areaComplemento).toBeNull();
     });
 
-    it('área inexistente ou inativa: 400 AREA_INVALIDA', async () => {
+    it('área inexistente ou inativa: 400 no campo areaId', async () => {
       repositorio.buscarAreaAtiva.mockResolvedValue(null);
 
-      expect(await codigoDoErro(service.criar(novo, solicitante))).toBe(
-        'AREA_INVALIDA',
-      );
+      expect(await camposComErro(service.criar(nova, solicitante))).toEqual([
+        'areaId',
+      ]);
       expect(repositorio.criar).not.toHaveBeenCalled();
     });
 
-    it('área "Outras" sem complemento: 400 com o campo areaComplemento', async () => {
-      repositorio.buscarAreaAtiva.mockResolvedValue({
-        id: 10,
-        exigeComplemento: true,
-      });
+    it('área "Outras" sem complemento: 400 no campo areaComplemento', async () => {
+      repositorio.buscarAreaAtiva.mockResolvedValue({ exigeComplemento: true });
 
-      const erro = (await service
-        .criar({ ...novo, areaId: 10 }, solicitante)
-        .catch((e: unknown) => e)) as DomainError;
-
-      expect(erro.httpStatus).toBe(400);
-      expect(erro.details[0].field).toBe('areaComplemento');
+      expect(
+        await camposComErro(
+          service.criar({ ...nova, areaId: 10 }, solicitante),
+        ),
+      ).toEqual(['areaComplemento']);
     });
   });
 
@@ -121,24 +123,20 @@ describe('SolicitacoesService', () => {
     it('solicitação finalizada não pode ser editada: 409', async () => {
       repositorio.buscarDetalhe.mockResolvedValue(solicitacao('APROVADA'));
 
-      expect(
-        await codigoDoErro(
-          service.atualizar('s-1', { titulo: 'Novo' }, analista),
-        ),
-      ).toBe('SOLICITACAO_FINALIZADA');
+      await expect(
+        service.atualizar('s-1', { titulo: 'Novo' }, analista),
+      ).rejects.toThrow('não podem ser editadas');
     });
 
     it('solicitante não edita solicitação de outra pessoa: 403', async () => {
-      repositorio.buscarDetalhe.mockResolvedValue(
-        solicitacao('ABERTA', 'u-solicitante'),
-      );
+      repositorio.buscarDetalhe.mockResolvedValue(solicitacao());
 
       await expect(
         service.atualizar('s-1', { titulo: 'Novo' }, outroSolicitante),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('analista edita qualquer uma', async () => {
+    it('analista edita qualquer uma, informando o status que leu', async () => {
       repositorio.buscarDetalhe.mockResolvedValue(solicitacao('EM_ANALISE'));
       repositorio.atualizar.mockResolvedValue(true);
 
@@ -146,19 +144,18 @@ describe('SolicitacoesService', () => {
 
       expect(repositorio.atualizar).toHaveBeenCalledWith(
         's-1',
+        'EM_ANALISE',
         expect.objectContaining({ titulo: 'Novo título' }),
       );
     });
 
-    it('finalizada por outra pessoa durante a edição: 409 SOLICITACAO_ALTERADA', async () => {
+    it('status mudou durante a edição: 409 alterada por outra pessoa', async () => {
       repositorio.buscarDetalhe.mockResolvedValue(solicitacao('EM_ANALISE'));
       repositorio.atualizar.mockResolvedValue(false);
 
-      expect(
-        await codigoDoErro(
-          service.atualizar('s-1', { titulo: 'Novo' }, analista),
-        ),
-      ).toBe('SOLICITACAO_ALTERADA');
+      await expect(
+        service.atualizar('s-1', { titulo: 'Novo' }, analista),
+      ).rejects.toThrow('alterada por outra pessoa');
     });
   });
 
@@ -166,15 +163,14 @@ describe('SolicitacoesService', () => {
     it('só exclui com status Aberta: 409', async () => {
       repositorio.buscarDetalhe.mockResolvedValue(solicitacao('EM_ANALISE'));
 
-      expect(await codigoDoErro(service.excluir('s-1', solicitante))).toBe(
-        'EXCLUSAO_NAO_PERMITIDA',
+      await expect(service.excluir('s-1', solicitante)).rejects.toThrow(
+        'status Aberta',
       );
+      expect(repositorio.excluir).not.toHaveBeenCalled();
     });
 
     it('solicitante não exclui solicitação de outra pessoa: 403', async () => {
-      repositorio.buscarDetalhe.mockResolvedValue(
-        solicitacao('ABERTA', 'u-solicitante'),
-      );
+      repositorio.buscarDetalhe.mockResolvedValue(solicitacao());
 
       await expect(
         service.excluir('s-1', outroSolicitante),
@@ -182,14 +178,12 @@ describe('SolicitacoesService', () => {
     });
 
     it('solicitante exclui a própria solicitação aberta', async () => {
-      repositorio.buscarDetalhe.mockResolvedValue(
-        solicitacao('ABERTA', 'u-solicitante'),
-      );
+      repositorio.buscarDetalhe.mockResolvedValue(solicitacao());
       repositorio.excluir.mockResolvedValue(true);
 
       await service.excluir('s-1', solicitante);
 
-      expect(repositorio.excluir).toHaveBeenCalledWith('s-1');
+      expect(repositorio.excluir).toHaveBeenCalledWith('s-1', 'ABERTA');
     });
   });
 
@@ -214,22 +208,22 @@ describe('SolicitacoesService', () => {
       });
     });
 
-    it('já finalizada: 409 SOLICITACAO_FINALIZADA', async () => {
+    it('já finalizada: 409 sem gravar nada', async () => {
       repositorio.buscarDetalhe.mockResolvedValue(solicitacao('REJEITADA'));
 
-      expect(
-        await codigoDoErro(service.decidir('s-1', decisao, analista)),
-      ).toBe('SOLICITACAO_FINALIZADA');
+      await expect(service.decidir('s-1', decisao, analista)).rejects.toThrow(
+        'não pode mais mudar de status',
+      );
       expect(repositorio.mudarStatus).not.toHaveBeenCalled();
     });
 
-    it('outro analista decidiu antes: 409 SOLICITACAO_ALTERADA', async () => {
+    it('outro analista decidiu antes: 409', async () => {
       repositorio.buscarDetalhe.mockResolvedValue(solicitacao('EM_ANALISE'));
       repositorio.mudarStatus.mockResolvedValue(false);
 
-      expect(
-        await codigoDoErro(service.decidir('s-1', decisao, analista)),
-      ).toBe('SOLICITACAO_ALTERADA');
+      await expect(
+        service.decidir('s-1', decisao, analista),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 

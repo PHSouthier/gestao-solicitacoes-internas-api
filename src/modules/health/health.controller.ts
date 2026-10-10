@@ -4,16 +4,9 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import {
-  ApiOkResponse,
-  ApiOperation,
-  ApiServiceUnavailableResponse,
-  ApiTags,
-} from '@nestjs/swagger';
-import { Public } from '../../common/decorators/public.decorator.js';
-import { ErrorResponseDto } from '../../common/dto/error-response.dto.js';
-import { CodigoErro } from '../../common/errors/codigos-erro.js';
+import { ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { Public } from '../auth/auth.decorators.js';
 import { HealthResponseDto } from './dto/health-response.dto.js';
 
 @ApiTags('Health')
@@ -24,24 +17,16 @@ export class HealthController {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Verifica se a API está no ar e alcança o banco (usado pelo healthcheck do Docker). */
   @Get()
-  @ApiOperation({ summary: 'Verifica se a API está no ar e alcança o banco' })
-  @ApiOkResponse({ type: HealthResponseDto })
-  @ApiServiceUnavailableResponse({
-    type: ErrorResponseDto,
-    description: 'Banco de dados indisponível',
-  })
   async check(): Promise<HealthResponseDto> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch (erro) {
       this.logger.error(
-        `Banco indisponível: ${(erro instanceof Error ? erro.message : String(erro)).replace(/\s+/g, ' ').trim()}`,
+        `Banco indisponível: ${erro instanceof Error ? erro.message : String(erro)}`,
       );
-      throw new ServiceUnavailableException({
-        code: CodigoErro.BANCO_INDISPONIVEL,
-        message: 'Banco de dados indisponível.',
-      });
+      throw new ServiceUnavailableException('Banco de dados indisponível.');
     }
 
     return {

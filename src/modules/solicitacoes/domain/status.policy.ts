@@ -1,8 +1,7 @@
-import { HttpStatus } from '@nestjs/common';
-import { CodigoErro } from '../../../common/errors/codigos-erro.js';
-import { DomainError } from '../../../common/errors/domain-error.js';
+import { ConflictException } from '@nestjs/common';
 import type { StatusSolicitacao } from '../../../generated/prisma/enums.js';
 
+/** Para quais status cada status pode ir. Aprovada e Rejeitada são finais. */
 const TRANSICOES: Record<StatusSolicitacao, readonly StatusSolicitacao[]> = {
   ABERTA: ['EM_ANALISE', 'APROVADA', 'REJEITADA'],
   EM_ANALISE: ['APROVADA', 'REJEITADA'],
@@ -21,28 +20,19 @@ export function estaFinalizada(status: StatusSolicitacao): boolean {
   return TRANSICOES[status].length === 0;
 }
 
-export function podeTransicionar(
-  de: StatusSolicitacao,
-  para: StatusSolicitacao,
-): boolean {
-  return TRANSICOES[de].includes(para);
-}
-
+/** Lança 409 se a solicitação não puder ir do status `de` para o `para`. */
 export function garantirTransicao(
   de: StatusSolicitacao,
   para: StatusSolicitacao,
 ): void {
   if (estaFinalizada(de)) {
-    throw new DomainError({
-      code: CodigoErro.SOLICITACAO_FINALIZADA,
-      message: `A solicitação já está ${ROTULOS[de].toLowerCase()} e não pode mais mudar de status.`,
-    });
+    throw new ConflictException(
+      `A solicitação já está ${ROTULOS[de].toLowerCase()} e não pode mais mudar de status.`,
+    );
   }
-  if (!podeTransicionar(de, para)) {
-    throw new DomainError({
-      code: CodigoErro.TRANSICAO_INVALIDA,
-      message: `Não é possível passar de "${ROTULOS[de]}" para "${ROTULOS[para]}".`,
-      httpStatus: HttpStatus.CONFLICT,
-    });
+  if (!TRANSICOES[de].includes(para)) {
+    throw new ConflictException(
+      `Não é possível passar de "${ROTULOS[de]}" para "${ROTULOS[para]}".`,
+    );
   }
 }

@@ -1,15 +1,13 @@
 import { formatarData } from '../../common/validators/data.js';
 import type {
-  HistoricoStatusDto,
   SolicitacaoDetalheDto,
   SolicitacaoResumoDto,
 } from './dto/solicitacao-response.dto.js';
-import type {
-  LinhaDetalhe,
-  LinhaHistorico,
-  LinhaResumo,
-} from './solicitacoes.repository.js';
+import type { LinhaDetalhe, LinhaResumo } from './solicitacoes.repository.js';
 
+// Converte as linhas do banco no formato das respostas da API.
+
+/** 42n → "SOL-000042" */
 export function formatarCodigo(codigo: bigint): string {
   return `SOL-${codigo.toString().padStart(6, '0')}`;
 }
@@ -30,15 +28,11 @@ export function paraResumo(linha: LinhaResumo): SolicitacaoResumoDto {
   };
 }
 
-export function paraHistorico(linha: LinhaHistorico): HistoricoStatusDto {
-  return { ...linha };
-}
-
 export function paraDetalhe(linha: LinhaDetalhe): SolicitacaoDetalheDto {
   return {
     ...paraResumo(linha),
     descricao: linha.descricao,
     criadoPor: linha.criadoPor,
-    historico: linha.historico.map(paraHistorico),
+    historico: linha.historico,
   };
 }

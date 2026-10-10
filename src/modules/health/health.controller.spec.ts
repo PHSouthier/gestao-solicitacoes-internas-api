@@ -26,15 +26,12 @@ describe('HealthController', () => {
     expect(new Date(resposta.timestamp).toISOString()).toBe(resposta.timestamp);
   });
 
-  it('com o banco fora do ar, responde 503 BANCO_INDISPONIVEL', async () => {
+  it('com o banco fora do ar, responde 503', async () => {
     prisma.$queryRaw.mockRejectedValue(new Error('connection refused'));
     vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
-    const erro = await controller.check().catch((e: unknown) => e);
-
-    expect(erro).toBeInstanceOf(ServiceUnavailableException);
-    expect((erro as ServiceUnavailableException).getResponse()).toMatchObject({
-      code: 'BANCO_INDISPONIVEL',
-    });
+    await expect(controller.check()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
   });
 });
