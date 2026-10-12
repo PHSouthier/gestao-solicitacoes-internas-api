@@ -19,7 +19,7 @@ Sistema para centralizar o cadastro, o acompanhamento e a decisão de solicitaç
 4. [Documentação complementar](#-documenta%C3%A7%C3%A3o-complementar)
 5. [Testes](#-testes)
 6. [Considerações arquiteturais](#-considera%C3%A7%C3%B5es-arquiteturais)
-7. [Autor](#-autor)
+7. [Autor](#autor)
 
 ---
 
@@ -244,6 +244,8 @@ Ao aprovar, a API grava a decisão e um evento `solicitacao.aprovada` na mesma t
 Se o sistema externo estiver fora do ar, os eventos ficam na fila e são entregues quando ele voltar. O usuário continua trabalhando normalmente e pode ver, na tela da solicitação, se a integração está pendente ou se já foi finalizada.
 
 ---
+
+<a id="autor"></a>
 
 # 👨‍💻 Autor
 
