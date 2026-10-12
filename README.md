@@ -1,114 +1,251 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Gestão de Solicitações Internas — API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+![Badge Status](http://img.shields.io/static/v1?label=STATUS&message=FINISH&color=GREEN&style=for-the-badge)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Sistema para centralizar o cadastro, o acompanhamento e a decisão de solicitações internas (compras, acessos, demandas entre áreas etc.).
 
-## Description
+| Repositório | Conteúdo |
+|---|---|
+| **gestao-solicitacoes-internas-api** (este) | API REST em NestJS, banco PostgreSQL, migrations com Flyway e Docker |
+| [gestao-solicitacoes-internas-web](https://github.com/PHSouthier/gestao-solicitacoes-internas-web) | Front-end em Next.js |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## Sumário
+
+1. [Tecnologias](#%EF%B8%8F-tecnologias)
+2. [Como executar](#%EF%B8%8F-como-executar)
+3. [Documentação da API](#-documenta%C3%A7%C3%A3o-da-api)
+4. [Documentação complementar](#-documenta%C3%A7%C3%A3o-complementar)
+5. [Testes](#-testes)
+6. [Considerações arquiteturais](#-considera%C3%A7%C3%B5es-arquiteturais)
+7. [Autor](#-autor)
+
+---
+
+## ✔️ Tecnologias
+
+| Camada | Tecnologia |
+|---|---|
+| Runtime | Node.js 24 · TypeScript |
+| Framework | NestJS 12 |
+| Banco | PostgreSQL 17 |
+| Migrations | Flyway 13 |
+| Acesso a dados | Prisma 7 |
+| Autenticação | JWT · login com Google |
+| Documentação | Swagger |
+| Testes | Vitest |
+| Containers | Docker |
+
+---
+
+## 🛠️ Como executar
+
+Para ter uma cópia do projeto rodando localmente, siga os passos abaixo.
+
+### Pré-requisitos
+
+- Git
+- Docker e Docker Compose
+- Node.js 24 e npm (só para rodar fora do Docker ou executar os testes)
+
+### Configuração
+
+1. Clone os dois repositórios **na mesma pasta** (o compose da API usa a pasta do front para montar a imagem dele):
+
+   ```bash
+   git clone https://github.com/PHSouthier/gestao-solicitacoes-internas-api.git
+   git clone https://github.com/PHSouthier/gestao-solicitacoes-internas-web.git
+   ```
+
+2. Crie o arquivo `.env` da API a partir do exemplo. Os valores do `.env.example` já funcionam para rodar localmente:
+
+   ```bash
+   cd gestao-solicitacoes-internas-api
+   cp .env.example .env
+   ```
+
+3. Suba a solução completa (banco, migrations, API e front) com o Docker Compose:
+
+   ```bash
+   docker compose --profile full up -d --build
+   ```
+
+   Sem o `--profile full`, sobem só o banco, as migrations e a API. Nesse caso, o front pode ser iniciado pelo compose do [repositório web](https://github.com/PHSouthier/gestao-solicitacoes-internas-web).
+
+4. Com os containers no ar, os serviços ficam disponíveis nos endereços:
+
+   - Aplicação (front): `http://localhost:3000`
+   - API: `http://localhost:3001/api/v1`
+   - Swagger: `http://localhost:3001/api/docs`
+   - Healthcheck: `http://localhost:3001/api/v1/health`
+   - PostgreSQL: `localhost:5433`
+
+### Rodando a API fora do Docker
+
+1. Crie o `.env` (passo 2 acima), suba o PostgreSQL e aplique as migrations:
+
+   ```bash
+   docker compose up -d flyway
+   ```
+
+2. Instale as dependências (isso também gera o cliente do Prisma):
+
+   ```bash
+   npm install
+   ```
+
+3. Rode a API em modo desenvolvimento, que recarrega a cada alteração:
+
+   ```bash
+   npm run start:dev
+   ```
+
+   A API fica disponível em `http://localhost:3001`.
+
+### Usuários de teste
+
+Criados pelo seed. Todos com a senha **`Senha@123`**.
+
+| Perfil | E-mail | Pode |
+|---|---|---|
+| Solicitante | `solicitante@empresa.local` | cadastrar; editar e excluir as próprias solicitações |
+| Analista | `analista@empresa.local` | tudo do solicitante em qualquer solicitação (menos excluir), analisar e decidir |
+| Administrador | `admin@empresa.local` | tudo, inclusive alterar o perfil de outros usuários |
+
+Também é possível criar uma conta pela tela de cadastro; ela nasce com perfil Solicitante.
+
+---
+
+## 📜 Documentação da API
+
+A API é documentada com **Swagger** (OpenAPI), gerado a partir do próprio código. Pelo Swagger UI é possível ver todos os endpoints, os dados de entrada e saída, os erros possíveis de cada rota e testar as requisições direto pelo navegador.
+
+### 🔹 Acessando a documentação
+
+Com a API rodando, a documentação fica disponível em:
+
+- **Swagger UI**: [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
+- **Especificação OpenAPI (JSON)**: [http://localhost:3001/api/docs-json](http://localhost:3001/api/docs-json)
+
+---
+
+## 📌 Documentação complementar
+
+Os detalhes do projeto estão em arquivos separados, na pasta [`docs`](docs):
+
+| Documento | Conteúdo |
+|---|---|
+| [Premissas e regras de negócio](docs/premissas-e-regras-de-negocio.md) | Fluxo de status, regras e permissões por perfil |
+| [Decisões técnicas](docs/decisoes-tecnicas.md) | O que foi escolhido e por quê: arquitetura, banco, segurança, API e documentação, qualidade e infraestrutura |
+| [Status da entrega](docs/status-da-entrega.md) | Implementado, pendente e como seria implementado, critérios de priorização e próximos passos |
+
+---
+
+## 📊 Testes
 
 ```bash
-$ npm install
+npm test
 ```
 
-## Compile and run the project
+**80 testes unitários (Vitest)**, sem banco, cobrindo as partes com regra:
 
-```bash
-# development
-$ npm run start
+| Área | O que garante |
+|---|---|
+| Solicitações (service) | cadastro, edição, exclusão, decisão, área "Outras", permissão do solicitante, alteração simultânea |
+| Máquina de estados | todas as transições permitidas e proibidas; estados finais |
+| AuthGuard | rota pública, 401 sem login, token inválido ou expirado, 403 por perfil |
+| AuthService | login válido e inválido, usuário inativo, os caminhos do login com Google |
+| Filtro de erros | formato padrão, erros por campo, 500 sem vazar a mensagem interna |
+| DTOs | validações do cadastro de usuário, do cadastro e da listagem de solicitações |
+| Usuários, dashboard e health | e-mail duplicado, perfil próprio, cálculo dos indicadores, banco fora do ar |
 
-# watch mode
-$ npm run start:dev
+O fluxo completo (navegador → front → API → banco) é coberto pelos testes **Playwright** do [repositório web](https://github.com/PHSouthier/gestao-solicitacoes-internas-web#-testes).
 
-# production mode
-$ npm run start:prod
+---
+
+## 🧩 Considerações arquiteturais
+
+### Evolução da solução
+
+**Quais mudanças arquiteturais seriam necessárias para suportar o crescimento da solução?**
+
+- **Várias instâncias da API e do front atrás de um load balancer**, com *auto scaling* conforme a carga.
+- **Mensageria com RabbitMQ ou Kafka** para tirar do fluxo principal o que pode rodar em segundo plano: integrações, notificações e relatórios.
+- **Workers separados** para consumir as filas, escalando independente da API.
+- **Cache com Redis** para os indicadores do dashboard e as listas que mudam pouco.
+
+**Quais seriam os principais riscos técnicos identificados?**
+
+- **Lentidão na busca e na listagem** com muitos registros. Mitigação: índices no banco e paginação, que já é obrigatória.
+- **Banco como ponto único de falha.** Mitigação: PostgreSQL gerenciado com alta disponibilidade e backups automáticos.
+- **Front e API se desencontrarem** quando um mudar o contrato. Mitigação: tipos gerados a partir do Swagger e checagem no CI.
+- **Pouca visibilidade de erros em produção.** Mitigação: logs centralizados, métricas e alertas.
+- **Autenticação própria** (senhas, recuperação, bloqueio). Mitigação: limite de tentativas no login e, depois, um provedor corporativo.
+
+**Como garantir escalabilidade, disponibilidade e manutenibilidade da aplicação?**
+
+- **Escalabilidade:** load balancer, auto scaling, cache com Redis, filas com RabbitMQ ou Kafka e réplicas de leitura do banco.
+- **Disponibilidade:** pelo menos duas instâncias de cada serviço, banco com alta disponibilidade, healthcheck e deploy sem parada.
+- **Manutenibilidade:** o padrão que já existe (mesmas camadas em todos os módulos, regras testadas, migrations versionadas, API versionada e documentada no Swagger), mais CI rodando testes a cada alteração.
+
+**Quais componentes ou camadas poderiam ser adicionados em uma evolução futura da arquitetura?**
+
+- **API Gateway** (roteamento, autenticação e limite de requisições).
+- **Message broker** (RabbitMQ ou Kafka) e **workers**.
+- **Redis** para cache.
+- **Observabilidade:** Prometheus e Grafana para métricas, e ELK ou Loki para logs.
+- **Serviço de notificações** (e-mail ou Teams).
+- **Armazenamento de arquivos** (como o S3) para anexos.
+
+### Integração com sistemas externos
+
+Cenário: após a aprovação de uma solicitação, um sistema corporativo externo precisa ser comunicado automaticamente.
+
+**Como realizaria esta integração?**
+
+De forma **assíncrona, com mensageria**:
+
+```mermaid
+flowchart LR
+    A[API] -->|aprova e grava o evento| DB[(PostgreSQL)]
+    DB --> W[Worker]
+    W -->|publica| Q[RabbitMQ ou Kafka]
+    Q --> C[Consumidor]
+    C -->|chama| EXT[Sistema externo]
 ```
 
-## Run tests
+Ao aprovar, a API grava a decisão e um evento `solicitacao.aprovada` na mesma transação. Um worker publica esse evento na fila, e um consumidor chama o sistema externo. Assim, a aprovação nunca fica sem o evento, e a API não depende do sistema externo para responder.
 
-```bash
-# unit tests
-$ npm run test
+**Quais padrões ou tecnologias utilizaria?**
 
-# e2e tests
-$ npm run test:e2e
+- **RabbitMQ ou Kafka** para as filas.
+- **Retry** com intervalo crescente entre as tentativas.
+- **Dead letter queue (DLQ)** para os eventos que falharem de vez.
+- **Idempotência:** cada evento tem um id único, para o sistema externo ignorar repetições.
+- **Circuit breaker**, para parar de chamar um sistema que está fora do ar.
 
-# test coverage
-$ npm run test:cov
-```
+**Como trataria falhas de comunicação?**
 
-## Deployment
+- O evento fica na fila e é **reenviado automaticamente**, com intervalo crescente entre as tentativas.
+- Depois de algumas tentativas, vai para a **DLQ**.
+- Corrigida a causa, os eventos da DLQ podem ser **reprocessados**.
+- Com o **circuit breaker**, os envios param por um tempo quando o sistema externo está fora, em vez de insistir.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+**Como garantiria rastreabilidade das operações realizadas?**
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+- **Id de correlação:** o `x-request-id` que a API já gera acompanha o evento até o sistema externo.
+- **Registro de cada tentativa de envio** (data, resultado e erro).
+- **Histórico da solicitação**, que já registra quem mudou o status, quando e com qual comentário.
+- **Logs centralizados**, pesquisáveis pelo id do evento ou da requisição.
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+**Como evitaria impacto na experiência do usuário caso o sistema externo estivesse indisponível?**
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Se o sistema externo estiver fora do ar, os eventos ficam na fila e são entregues quando ele voltar. O usuário continua trabalhando normalmente e pode ver, na tela da solicitação, se a integração está pendente ou se já foi finalizada.
 
-## Observability
+---
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+# 👨‍💻 Autor
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+| [<img loading="lazy" src="https://avatars.githubusercontent.com/u/50518425?v=4" width=115><br><sub>Pedro Henrique Southier</sub>](https://github.com/PHSouthier) |
+| :--------------------------------------------------------------------------------------------------------------------------------------------------------------: |
